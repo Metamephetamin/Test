@@ -4,7 +4,6 @@ import {
   ClipboardList,
   Filter,
   Pencil,
-  Plus,
   RefreshCw,
   Save,
   Search,
@@ -113,6 +112,10 @@ export function App() {
     }
   }
 
+  async function refreshData() {
+    await Promise.all([loadCatalog(), loadEntries()]);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -200,9 +203,14 @@ export function App() {
           <div className="eyebrow">Строительный объект</div>
           <h1>Журнал выполненных работ</h1>
         </div>
-        <button className="ghost-button" onClick={() => void loadEntries()} title="Обновить данные">
+        <button
+          className="ghost-button"
+          disabled={isLoading}
+          onClick={() => void refreshData()}
+          title="Повторить загрузку данных"
+        >
           <RefreshCw size={18} />
-          <span>Обновить</span>
+          <span>{isLoading ? "Загрузка" : "Обновить"}</span>
         </button>
       </header>
 
@@ -223,12 +231,7 @@ export function App() {
               <button className="icon-button" onClick={resetForm} title="Отменить редактирование">
                 <X size={18} />
               </button>
-            ) : (
-              <span className="status-pill">
-                <Plus size={14} />
-                ввод
-              </span>
-            )}
+            ) : null}
           </div>
 
           <form className="entry-form" onSubmit={handleSubmit}>

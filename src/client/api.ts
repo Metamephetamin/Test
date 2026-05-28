@@ -47,7 +47,13 @@ export async function deleteEntry(id: number) {
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  let response: Response;
+
+  try {
+    response = await fetch(url, init);
+  } catch {
+    throw new Error("Не удалось подключиться к API. Проверьте, что сервер запущен, и нажмите «Обновить».");
+  }
 
   if (!response.ok) {
     let message = "Не удалось выполнить запрос";
@@ -70,5 +76,9 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error("Сервер вернул некорректный ответ. Нажмите «Обновить» или перезапустите приложение.");
+  }
 }
