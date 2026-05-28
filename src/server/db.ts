@@ -110,6 +110,32 @@ export function workTypeExists(database: AppDatabase, id: number): boolean {
   return Boolean(row);
 }
 
+export function findOrCreateWorkType(database: AppDatabase, name: string, defaultUnit: string): WorkType {
+  const normalizedName = name.trim();
+  const normalizedUnit = defaultUnit.trim();
+  const existing = database.sqlite
+    .prepare("SELECT id, name, default_unit FROM work_types WHERE name = ?")
+    .get(normalizedName) as WorkTypeRow | undefined;
+
+  if (existing) {
+    return {
+      id: existing.id,
+      name: existing.name,
+      defaultUnit: existing.default_unit
+    };
+  }
+
+  const result = database.sqlite
+    .prepare("INSERT INTO work_types (name, default_unit) VALUES (?, ?)")
+    .run(normalizedName, normalizedUnit);
+
+  return {
+    id: Number(result.lastInsertRowid),
+    name: normalizedName,
+    defaultUnit: normalizedUnit
+  };
+}
+
 export function toJournalEntry(row: EntryRow): JournalEntry {
   return {
     id: row.id,

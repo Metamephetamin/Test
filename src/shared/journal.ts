@@ -25,7 +25,8 @@ export type JournalSummary = {
 
 export type EntryPayload = {
   workDate: string;
-  workTypeId: number;
+  workTypeId?: number;
+  workTypeName?: string;
   quantity: number;
   unit: string;
   performer: string;

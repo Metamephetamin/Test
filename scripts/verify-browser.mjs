@@ -4,18 +4,21 @@ const appUrl = process.env.APP_URL ?? "http://localhost:5173/";
 const marker = Date.now();
 const initialPerformer = `Автопроверка-${marker}`;
 const updatedPerformer = `Автопроверка-обновлено-${marker}`;
+const customWorkType = `Нестандартные работы ${marker}`;
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 
 try {
   await page.goto(appUrl, { waitUntil: "networkidle" });
-  await page.locator("select").selectOption({ label: "Монтаж опалубки" });
+  await page.locator("select").selectOption({ label: "Свой вид работ" });
+  await page.getByLabel("Название вида работ").fill(customWorkType);
   await page.locator("input[type=number]").fill("24");
   await page.getByLabel("Исполнитель").fill(initialPerformer);
   await page.getByLabel("Комментарий").fill("Ось А-Г, этаж 3");
   await page.getByRole("button", { name: "Добавить" }).click();
   await page.getByText(initialPerformer).waitFor({ timeout: 5000 });
+  await page.locator("tr", { hasText: initialPerformer }).getByText(customWorkType).waitFor({ timeout: 5000 });
 
   await page.locator("tr", { hasText: initialPerformer }).getByTitle("Редактировать").click();
   await page.locator("input[type=number]").fill("31.5");

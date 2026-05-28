@@ -65,6 +65,36 @@ describe("work journal API", () => {
     );
   });
 
+  it("creates a catalog work type when a custom work name is submitted", async () => {
+    const createResponse = await request(app)
+      .post("/api/entries")
+      .send({
+        workDate: "2026-05-28",
+        workTypeName: "Гидроизоляция швов",
+        quantity: 42,
+        unit: "м.п.",
+        performer: "ООО Изолстрой"
+      })
+      .expect(201);
+
+    expect(createResponse.body.entry).toMatchObject({
+      workTypeId: expect.any(Number),
+      workTypeName: "Гидроизоляция швов",
+      quantity: 42,
+      unit: "м.п."
+    });
+
+    const catalogResponse = await request(app).get("/api/work-types").expect(200);
+    expect(catalogResponse.body.workTypes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Гидроизоляция швов",
+          defaultUnit: "м.п."
+        })
+      ])
+    );
+  });
+
   it("filters entries by inclusive date range sorted by newest date", async () => {
     await request(app).post("/api/entries").send({
       workDate: "2026-05-27",

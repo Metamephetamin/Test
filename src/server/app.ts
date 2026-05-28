@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { z } from "zod";
 import {
+  findOrCreateWorkType,
   getEntryById,
   listWorkTypes,
   toJournalEntry,
@@ -13,11 +14,20 @@ const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const entryInputSchema = z.object({
   workDate: isoDateSchema,
-  workTypeId: z.coerce.number().int().positive(),
+  workTypeId: z.coerce.number().int().positive().optional(),
+  workTypeName: z.string().trim().min(1).max(120).optional(),
   quantity: z.coerce.number().positive(),
   unit: z.string().trim().min(1).max(24),
   performer: z.string().trim().min(1).max(120),
   comment: z.string().trim().max(500).optional().default("")
+}).superRefine((value, context) => {
+  if (!value.workTypeId && !value.workTypeName) {
+    context.addIssue({
+      code: "custom",
+      path: ["workTypeId"],
+      message: "Work type id or name is required"
+    });
+  }
 });
 
 const filtersSchema = z.object({
@@ -108,7 +118,8 @@ export function createApp(database: AppDatabase) {
       return;
     }
 
-    if (!workTypeExists(database, payload.data.workTypeId)) {
+    const workTypeId = resolveWorkTypeId(database, payload.data);
+    if (!workTypeId) {
       response.status(400).json({ error: "UNKNOWN_WORK_TYPE", fields: ["workTypeId"] });
       return;
     }
@@ -120,7 +131,7 @@ export function createApp(database: AppDatabase) {
         VALUES (@workDate, @workTypeId, @quantity, @unit, @performer, @comment)
       `
       )
-      .run(payload.data);
+      .run({ ...payload.data, workTypeId });
 
     response.status(201).json({ entry: getEntryById(database, Number(result.lastInsertRowid)) });
   });
@@ -140,7 +151,8 @@ export function createApp(database: AppDatabase) {
       return;
     }
 
-    if (!workTypeExists(database, payload.data.workTypeId)) {
+    const workTypeId = resolveWorkTypeId(database, payload.data);
+    if (!workTypeId) {
       response.status(400).json({ error: "UNKNOWN_WORK_TYPE", fields: ["workTypeId"] });
       return;
     }
@@ -160,7 +172,7 @@ export function createApp(database: AppDatabase) {
         WHERE id = @id
       `
       )
-      .run({ ...payload.data, id });
+      .run({ ...payload.data, workTypeId, id });
 
     if (result.changes === 0) {
       response.status(404).json({ error: "ENTRY_NOT_FOUND" });
@@ -212,4 +224,19 @@ function parseEntryPayload(body: unknown) {
 
 function uniqueFields(issues: z.core.$ZodIssue[]) {
   return Array.from(new Set(issues.map((issue) => String(issue.path[0] ?? "body"))));
+}
+
+function resolveWorkTypeId(
+  database: AppDatabase,
+  payload: { workTypeId?: number; workTypeName?: string; unit: string }
+) {
+  if (payload.workTypeId) {
+    return workTypeExists(database, payload.workTypeId) ? payload.workTypeId : null;
+  }
+
+  if (payload.workTypeName) {
+    return findOrCreateWorkType(database, payload.workTypeName, payload.unit).id;
+  }
+
+  return null;
 }

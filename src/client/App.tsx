@@ -21,6 +21,7 @@ import {
 } from "./api";
 import {
   buildEntryPayload,
+  CUSTOM_WORK_TYPE_ID,
   createEmptyDraft,
   draftFromEntry,
   validateDraft,
@@ -128,6 +129,7 @@ export function App() {
       } else {
         await createEntry(payload);
       }
+      await loadCatalog();
       resetForm();
       await loadEntries();
     } catch (requestError) {
@@ -142,6 +144,7 @@ export function App() {
     setDraft({
       ...createEmptyDraft(),
       workTypeId: firstType ? String(firstType.id) : "",
+      customWorkTypeName: "",
       unit: firstType?.defaultUnit ?? ""
     });
     setDraftErrors({});
@@ -179,9 +182,15 @@ export function App() {
     setDraft((current) => ({
       ...current,
       workTypeId: value,
+      customWorkTypeName: value === CUSTOM_WORK_TYPE_ID ? current.customWorkTypeName : "",
       unit: nextType?.defaultUnit ?? current.unit
     }));
-    setDraftErrors((current) => ({ ...current, workTypeId: undefined, unit: undefined }));
+    setDraftErrors((current) => ({
+      ...current,
+      workTypeId: undefined,
+      customWorkTypeName: undefined,
+      unit: undefined
+    }));
   }
 
   return (
@@ -239,8 +248,19 @@ export function App() {
                     {type.name}
                   </option>
                 ))}
+                <option value={CUSTOM_WORK_TYPE_ID}>Свой вид работ</option>
               </select>
             </Field>
+
+            {draft.workTypeId === CUSTOM_WORK_TYPE_ID ? (
+              <Field label="Название вида работ" error={draftErrors.customWorkTypeName}>
+                <input
+                  value={draft.customWorkTypeName}
+                  onChange={(event) => updateDraft("customWorkTypeName", event.target.value)}
+                  placeholder="Например, гидроизоляция швов"
+                />
+              </Field>
+            ) : null}
 
             <div className="form-row">
               <Field label="Объем" error={draftErrors.quantity}>
@@ -347,16 +367,20 @@ export function App() {
                 ) : (
                   entries.map((entry) => (
                     <tr key={entry.id}>
-                      <td className="date-cell">{formatDate(entry.workDate)}</td>
-                      <td>
+                      <td className="date-cell" data-label="Дата">
+                        {formatDate(entry.workDate)}
+                      </td>
+                      <td data-label="Вид работ">
                         <strong>{entry.workTypeName}</strong>
                       </td>
-                      <td className="quantity-cell">
+                      <td className="quantity-cell" data-label="Объем">
                         {formatNumber(entry.quantity)} <span>{entry.unit}</span>
                       </td>
-                      <td>{entry.performer}</td>
-                      <td className="comment-cell">{entry.comment || "—"}</td>
-                      <td>
+                      <td data-label="Исполнитель">{entry.performer}</td>
+                      <td className="comment-cell" data-label="Комментарий">
+                        {entry.comment || "—"}
+                      </td>
+                      <td data-label="Действия">
                         <div className="row-actions">
                           <button className="icon-button" onClick={() => editEntry(entry)} title="Редактировать">
                             <Pencil size={17} />

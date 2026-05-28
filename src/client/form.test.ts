@@ -21,10 +21,26 @@ describe("journal form model", () => {
     });
   });
 
+  it("requires a custom work type name when custom mode is selected", () => {
+    const result = validateDraft({
+      ...createEmptyDraft(),
+      workTypeId: "custom",
+      customWorkTypeName: "",
+      quantity: "12",
+      unit: "м2",
+      performer: "Бригада 1"
+    });
+
+    expect(result).toMatchObject({
+      customWorkTypeName: "Укажите свой вид работ"
+    });
+  });
+
   it("converts a valid draft into an API payload", () => {
     const payload = buildEntryPayload({
       workDate: "2026-05-28",
       workTypeId: "2",
+      customWorkTypeName: "",
       quantity: "18.5",
       unit: "м2",
       performer: "ООО Вертикаль",
@@ -38,6 +54,27 @@ describe("journal form model", () => {
       unit: "м2",
       performer: "ООО Вертикаль",
       comment: "Секция Б"
+    });
+  });
+
+  it("converts a custom work type draft into an API payload", () => {
+    const payload = buildEntryPayload({
+      workDate: "2026-05-28",
+      workTypeId: "custom",
+      customWorkTypeName: "Устройство временного ограждения",
+      quantity: "36",
+      unit: "м.п.",
+      performer: "Смена 2",
+      comment: ""
+    });
+
+    expect(payload).toEqual({
+      workDate: "2026-05-28",
+      workTypeName: "Устройство временного ограждения",
+      quantity: 36,
+      unit: "м.п.",
+      performer: "Смена 2",
+      comment: ""
     });
   });
 });
